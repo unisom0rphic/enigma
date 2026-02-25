@@ -100,6 +100,9 @@
 <div class="container">
     <header>
         <h1>Обращения граждан ({filteredTickets().length})</h1>
+        <div class="header-actions">
+            <a href="/analytics" class="btn-secondary">Аналитика</a>
+        </div>
     </header>
 
     <!-- Панель поиска -->
@@ -350,6 +353,24 @@
         gap: 0.5rem;
         cursor: pointer;
         padding: 2px;
+    }
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
     }
 </style>
 
