@@ -1,60 +1,65 @@
 // src/routes/api/get_tickets/+server.js
 import { json } from '@sveltejs/kit';
 
-export async function GET() {
-    // Имитация задержки сервера (опционально)
-    await new Promise(resolve => setTimeout(resolve, 300));
+function getRandomElement(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
 
-    const tickets = [
-        {
-            id: 1,
-            date: '2023-10-25 14:30',
-            name: 'Иванов Иван Иванович', // Переименовали fio -> name
-            object: 'Котельная №3',
-            phone: '+7 (900) 123-45-67',
-            email: 'ivanov@gas.ru',
-            factory_numbers: 'ГН-001234',
-            device_type: 'Сигма-1',
-            sentiment: 'негативный',
-            issue: 'Прибор не включается, издаёт странные звуки. Срочно нужен мастер.'
-        },
-        {
-            id: 2,
-            date: '2023-10-25 15:00',
-            name: 'Петров Петр Петрович',
-            object: 'Газпром трансгаз',
-            phone: '+7 (900) 765-43-21',
-            email: 'petrov@corp.ru',
-            factory_numbers: 'ГН-556677',
-            device_type: 'Орт-2',
-            sentiment: 'позитивный',
-            issue: 'Хотелось бы уточнить сроки поверки оборудования. Заранее спасибо.'
-        },
-        {
-            id: 3,
-            date: '2023-10-26 09:15',
-            name: 'Сидорова Анна Павловна',
-            object: 'Завод "Авангард"',
-            phone: '+7 (950) 111-22-33',
-            email: 'sidorova@avangard.com',
-            factory_numbers: 'ГН-998877',
-            device_type: 'Сигма-1',
-            sentiment: 'нейтральный',
-            issue: 'Запрос на техническую документацию.'
-        },
-        {
-            id: 4,
-            date: '2023-10-26 11:45',
-            name: 'Козлов Дмитрий Сергеевич',
-            object: 'ТЭЦ-5',
-            phone: '+7 (922) 555-66-77',
-            email: 'kozlov@energy.net',
-            factory_numbers: 'ГН-112233',
-            device_type: 'Метан-3',
-            sentiment: 'негативный',
-            issue: 'Показания некорректны, завышает процент метана.'
-        }
+function generateId() {
+    return Math.floor(Math.random() * 100000);
+}
+
+export async function GET() {
+    // Справочники для рандомизации
+    const names = ['Иванов И.И.', 'Петров П.П.', 'Сидорова А.А.', 'Козлов Д.С.', 'Смирнов В.В.', 'Попова Е.А.'];
+    const objects = ['Котельная №1', 'Газпром трансгаз', 'Завод "Авангард"', 'ТЭЦ-5', 'Больница №3', 'Школа №12'];
+    const devices = ['Сигма-1', 'Орт-2', 'Метан-3', 'ПГС-10'];
+    const sentiments = ['позитивный', 'негативный', 'нейтральный'];
+    const issues = [
+        'Прибор не включается.',
+        'Требуется поверка.',
+        'Нет показаний на дисплее.',
+        'Сигнализация срабатывает без причины.',
+        'Запрос документации.',
+        'Необходима замена датчика.'
     ];
+    // Домены для проверки фильтра по Email
+    const emailDomains = ['@gas.ru', '@mail.ru', '@yandex.ru', '@corp.com'];
+    // Типы телефонов для проверки фильтра
+    const phoneTypes = [
+        { label: 'Мобильный', prefix: '+7 (9' }, 
+        { label: 'Городской', prefix: '+7 (3' }
+    ];
+
+    const tickets = [];
+
+    // Генерируем 60 записей
+    for (let i = 1; i <= 60; i++) {
+        const phoneType = getRandomElement(phoneTypes);
+        // Генерируем телефон в зависимости от типа
+        const phone = phoneType.prefix + Math.floor(Math.random() * 1000000000).toString().slice(0, 9) + ')';
+        const domain = getRandomElement(emailDomains);
+        const name = getRandomElement(names);
+
+        tickets.push({
+            id: i,
+            date: `2023-10-${(i % 28) + 1} ${Math.floor(Math.random() * 24)}:${Math.floor(Math.random() * 60)}`,
+            name: name,
+            object: getRandomElement(objects),
+            phone: phone,
+            email: `${name.split(' ')[0].toLowerCase()}${i}${domain}`,
+            factory_numbers: `ГН-${generateId()}`,
+            device_type: getRandomElement(devices),
+            sentiment: getRandomElement(sentiments),
+            issue: getRandomElement(issues),
+            // Добавляем служебные поля для удобства фильтрации на клиенте
+            email_domain: domain,
+            phone_type: phoneType.label
+        });
+    }
+
+    // Имитация задержки
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     return json(tickets);
 }
