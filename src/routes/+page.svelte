@@ -100,15 +100,12 @@
 <div class="container">
     <header>
         <h1>Обращения граждан ({filteredTickets().length})</h1>
-        <div class="header-actions">
-            <a href="/analytics" class="btn-secondary">Аналитика</a>
-        </div>
     </header>
 
     <!-- Панель поиска -->
     <div class="search-panel">
         <div class="filters-row">
-            <!-- Левая часть: Выбор поля + Ввод текста -->
+            <!-- 1. Поиск -->
             <div class="search-wrapper">
                 <select bind:value={searchField} class="field-select">
                     {#each fieldOptions as opt}
@@ -124,13 +121,13 @@
                 />
             </div>
 
-            <!-- Правая часть: Фильтр настроения -->
+            <!-- 2. Фильтр настроения -->
             <div class="dropdown-container">
                 <button 
                     class="dropdown-trigger"
                     onclick={() => isSentimentDropdownOpen = !isSentimentDropdownOpen}
                 >
-                    Настроение {selectedSentiments.length > 0 ? `(${selectedSentiments.length})` : '(Все)'}
+                    Настроение {selectedSentiments.length > 0 ? `(${selectedSentiments.length})` : ''}
                     <span class="arrow">▼</span>
                 </button>
 
@@ -150,8 +147,10 @@
                         {/each}
                     </div>
                 {/if}
-            </div>
-        </div>
+            </div> 
+        <!-- 3. Кнопка Аналитика (сразу после dropdown) -->
+        <a href="/analytics" class="btn-white">Аналитика</a>
+    </div>
 
         <div class="hint">
             Например: выберите "Дата" и введите "2023-10-25". Используйте фильтр настроения для отсева по тону.
@@ -217,8 +216,20 @@
 <style>
     /* --- Layout --- */
     .container { max-width: 1500px; margin: 0 auto; padding: 2rem; }
-    header { margin-bottom: 1rem; }
-    h1 { margin: 0; font-size: 1.5rem; color: #2c3e50; }
+    header {
+        display: flex;
+        justify-content: space-between; /* Разносим по краям */
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #2c3e50;
+    }
 
     /* --- Search Panel --- */
     .search-panel {
@@ -306,10 +317,34 @@
     .filters-row {
         display: flex;
         gap: 1rem;
-        align-items: flex-start;
+        align-items: center; /* Центрируем элементы по вертикали */
         flex-wrap: wrap;
     }
 
+    /* Стиль белой кнопки */
+    .btn-white {
+        background-color: #ffffff;
+        color: #333;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        border: 1px solid #dcdfe6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        transition: all 0.2s;
+        white-space: nowrap; 
+        height: 42px; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .btn-white:hover {
+        background-color: #f5f7fa;
+        border-color: #c0c4cc;
+    }
     /* --- Dropdown Styles --- */
     .dropdown-container { position: relative; }
     
@@ -354,23 +389,10 @@
         cursor: pointer;
         padding: 2px;
     }
+
     .header-actions {
         display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-        text-decoration: none;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        font-size: 0.9rem;
-        transition: background 0.2s;
-    }
-    .btn-secondary:hover {
-        background-color: #5a6268;
+        gap: 0.5rem;
     }
 </style>
 
