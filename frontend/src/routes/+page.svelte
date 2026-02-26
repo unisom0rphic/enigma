@@ -5,12 +5,15 @@
     let tickets = $state([]);
     let isLoading = $state(true);
     let currentPage = $state(1);
-     // --- Состояния для фильтра настроения ---
-    let selectedSentiments = $state([]); // Выбранные настроения
-    let isSentimentDropdownOpen = $state(false); // Открыт ли dropdown
+    
+    // --- Состояния для фильтров и Dropdowns ---
+    let selectedSentiments = $state([]);
+    let isSentimentDropdownOpen = $state(false);
+    // Новое состояние для меню экспорта
+    let isExportDropdownOpen = $state(false); 
+
     const sentimentOptions = ['позитивный', 'негативный', 'нейтральный'];
 
-    // Функция для переключения чекбоксов в массиве
     function toggleSelection(array, item) {
         const index = array.indexOf(item);
         if (index === -1) {
@@ -18,15 +21,14 @@
         } else {
             array.splice(index, 1);
         }
-    }   const itemsPerPage = 15;
+    }
 
-    // --- Состояния фильтров ---
-    // Какое поле ищем (по умолчанию 'name')
+    const itemsPerPage = 15;
+
+    // --- Состояния фильтров поиска ---
     let searchField = $state('name');
-    // Что ищем
     let searchValue = $state('');
 
-    // Карта полей для отображения в селекте
     const fieldOptions = [
         { value: 'name', label: 'Имя (ФИО)' },
         { value: 'email', label: 'Email' },
@@ -49,18 +51,15 @@
         }
     });
 
-    // --- Логика фильтрации (Derived) ---
+    // --- Логика фильтрации ---
     let filteredTickets = $derived(() => {
         const term = searchValue.toLowerCase().trim();
         
         return tickets.filter(t => {
-            // 1. Логика текстового поиска
             const fieldValue = t[searchField];
             const stringVal = String(fieldValue || '').toLowerCase();
             const matchesSearch = !term || stringVal.includes(term);
 
-            // 2. Логика фильтра по настроению
-            // Если массив пуст, считаем, что фильтр не активен
             const matchesSentiment = selectedSentiments.length === 0 || 
                 selectedSentiments.includes(t.sentiment);
 
@@ -77,7 +76,6 @@
         return filteredTickets().slice(start, end);
     });
 
-    // Сброс страницы при изменении фильтров
     $effect(() => {
         searchField, searchValue;
         currentPage = 1;
@@ -90,6 +88,73 @@
             case 'негативный': return 'sentiment-negative';
             default: return 'sentiment-neutral';
         }
+    }
+
+    // --- Логика Экспорта ---
+    // ВАЖНО: экспорт напрямую в .xlsx добавляет 30-50Кб к размеру бандла,
+    // поэтому принято решение временно отказаться от него 
+
+    // Хелпер для скачивания файла
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a); // Для Firefox
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Экспорт в JSON
+    function exportJSON() {
+        const data = filteredTickets(); // Берем все отфильтрованные
+        const jsonString = JSON.stringify(data, null, 2);
+        downloadFile(jsonString, 'tickets_export.json', 'application/json');
+        isExportDropdownOpen = false;
+    }
+
+    // Экспорт в CSV
+    function exportCSV() {
+        const data = filteredTickets();
+        if (data.length === 0) {
+            alert('Нет данных для экспорта');
+            return;
+        }
+
+        // Определяем заголовки на основе "сырых" ключей
+        // Можно взять ключи из первого объекта, но лучше задать явно для порядка колонок
+        const headers = [
+            'id', 'date', 'name', 'object', 'phone', 'phone_type', 
+            'email', 'device_type', 'factory_numbers', 'sentiment', 'issue'
+        ];
+
+        // Формируем строки CSV
+        const csvRows = [];
+
+        // Добавляем строку заголовков
+        csvRows.push(headers.join(';')); // Используем ; как разделитель, так Excel корректнее открывает на RU локали
+
+        // Добавляем данные
+        for (const row of data) {
+            const values = headers.map(header => {
+                const value = row[header] === null || row[header] === undefined ? '' : row[header];
+                // Экранируем кавычки и оборачиваем в кавычки, если есть разделитель или перенос строки
+                const stringValue = String(value);
+                if (stringValue.includes(';') || stringValue.includes('"') || stringValue.includes('\n')) {
+                    return `"${stringValue.replace(/"/g, '""')}"`;
+                }
+                return stringValue;
+            });
+            csvRows.push(values.join(';'));
+        }
+
+        const csvString = csvRows.join('\n');
+        // Добавляем BOM для корректного отображения кириллицы в Excel
+        const bom = '\uFEFF'; 
+        downloadFile(bom + csvString, 'tickets_export.csv', 'text/csv;charset=utf-8;');
+        isExportDropdownOpen = false;
     }
 </script>
 
@@ -148,9 +213,33 @@
                     </div>
                 {/if}
             </div> 
-        <!-- 3. Кнопка Аналитика (сразу после dropdown) -->
-        <a href="/analytics" class="btn-white">Аналитика</a>
-    </div>
+            
+            <!-- 3. Кнопка Аналитика -->
+            <a href="/analytics" class="btn-white">Аналитика</a>
+
+            <!-- 4. Кнопка Экспорт -->
+            <div class="dropdown-container">
+                <button 
+                    class="btn-white dropdown-trigger-alt"
+                    onclick={() => isExportDropdownOpen = !isExportDropdownOpen}>
+                    Экспорт
+                    <span class="arrow">▼</span>
+                </button>
+
+                {#if isExportDropdownOpen}
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item" onclick={exportCSV}>
+                            .CSV
+                        </button>
+                        <button class="dropdown-item" onclick={exportJSON}>
+                            .JSON
+                        </button>
+                        <!-- placeholder для будущего xlsx -->
+                        <!-- <button class="dropdown-item" disabled>.XLSX (Скоро)</button> -->
+                    </div>
+                {/if}
+            </div>
+        </div>
 
         <div class="hint">
             Например: выберите "Дата" и введите "2023-10-25". Используйте фильтр настроения для отсева по тону.
@@ -218,7 +307,7 @@
     .container { max-width: 1500px; margin: 0 auto; padding: 2rem; }
     header {
         display: flex;
-        justify-content: space-between; /* Разносим по краям */
+        justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
         flex-wrap: wrap;
@@ -250,20 +339,18 @@
         max-width: 600px;
     }
 
-    /* Select (Dropdown) */
     .field-select {
         background-color: #f5f7fa;
         border: none;
         border-right: 1px solid #dcdfe6;
         padding: 0.75rem 1rem;
         font-size: 0.95rem;
-        color: #333; /* ИСПРАВЛЕНИЕ: Темный цвет текста */
+        color: #333;
         cursor: pointer;
         outline: none;
         min-width: 140px;
     }
 
-    /* Input */
     .search-input {
         flex: 1;
         border: none;
@@ -274,9 +361,7 @@
         background: #fff;
     }
 
-    .search-input::placeholder {
-        color: #a8abb2;
-    }
+    .search-input::placeholder { color: #a8abb2; }
 
     .hint {
         margin-top: 0.75rem;
@@ -310,26 +395,36 @@
 
     /* --- Pagination --- */
     .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
-    button { background-color: #409eff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px; transition: opacity 0.2s; }
+    
+    /* --- Buttons General --- */
+    .btn-group button, .pagination button {
+        background-color: #409eff; 
+        color: white; 
+        border: none; 
+        padding: 8px 16px; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        margin-left: 10px; 
+        transition: opacity 0.2s;
+    }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     button:hover:not(:disabled) { opacity: 0.9; }
+
     /* --- Filters Layout --- */
     .filters-row {
         display: flex;
         gap: 1rem;
-        align-items: center; /* Центрируем элементы по вертикали */
+        align-items: center;
         flex-wrap: wrap;
     }
 
-    /* Стиль белой кнопки */
+    /* Стиль белой кнопки (используется для Аналитики и Экспорта) */
     .btn-white {
         background-color: #ffffff;
         color: #333;
         text-decoration: none;
         padding: 0.5rem 1rem;
         border-radius: 6px;
-        font-size: 0.9rem;
-        font-weight: 500;
         border: 1px solid #dcdfe6;
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         transition: all 0.2s;
@@ -339,15 +434,19 @@
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
+        cursor: pointer;
+        gap: 0.5rem; /* Для стрелочки */
     }
 
     .btn-white:hover {
         background-color: #f5f7fa;
         border-color: #c0c4cc;
     }
+
     /* --- Dropdown Styles --- */
     .dropdown-container { position: relative; }
     
+    /* Триггер для фильтра настроения */
     .dropdown-trigger {
         padding: 0.75rem 1rem;
         background: #fff;
@@ -359,8 +458,8 @@
         gap: 0.5rem;
         min-width: 150px;
         justify-content: space-between;
-        color: #333; /* Темный цвет текста */
-        height: 42px; /* Чтобы совпадало по высоте с инпутом */
+        color: #333;
+        height: 42px;
         box-sizing: border-box;
     }
     
@@ -378,8 +477,27 @@
         box-shadow: 0 2px 12px rgba(0,0,0,0.1);
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.25rem; /* Чуть меньше отступ для пунктов */
         min-width: 140px;
+    }
+
+    /* Стили для пунктов меню экспорта */
+    .dropdown-item {
+        background: none;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #333;
+        border-radius: 4px;
+        transition: background 0.2s;
+        margin: 0; /* сброс дефолтных отступов */
+    }
+
+    .dropdown-item:hover {
+        background-color: #f5f7fa;
+        color: #409eff;
     }
 
     .checkbox-label {
@@ -389,17 +507,14 @@
         cursor: pointer;
         padding: 2px;
     }
-
-    .header-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
 </style>
 
 <svelte:document 
     onclick={(e) => {
+        // Закрываем все дропдауны, если клик был вне их контейнеров
         if (!e.target.closest('.dropdown-container')) {
             isSentimentDropdownOpen = false;
+            isExportDropdownOpen = false;
         }
     } 
 }/>
