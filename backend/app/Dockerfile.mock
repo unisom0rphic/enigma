@@ -1,0 +1,23 @@
+# Используем легкий образ Python
+FROM python:3.11-slim
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Устанавливаем системные зависимости (нужны для компиляции некоторых библиотек, например numpy/faiss)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копируем файл зависимостей
+COPY requirements.txt .
+
+# Устанавливаем зависимости
+# --no-cache-dir уменьшает размер образа
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем код приложения
+COPY . .
+
+# Команда запуска (примерная, зависит от main.py)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,34 @@
+# Web
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+python-multipart
+
+# Database
+asyncpg
+
+# NLP Core
+natasha
+pymorphy2
+pymorphy2-dicts-ru  # <--- Важно! Словари внутри контейнера
+razdel
+
+# Dependency fix for pymorphy2 (fixes pkg_resources error)
+setuptools==69.5.1  # <--- Фиксируем рабочую версию
+
+# RAG & AI
+faiss-cpu
+sentence-transformers
+torch
+numpy
+requests
+
+# Messaging
+aiogram
+redis
+
+# Testing
+pytest
+httpx
