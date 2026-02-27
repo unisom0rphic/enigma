@@ -18,6 +18,71 @@
 
 ## 2. Архитектура
 
+Файловая структура проекта:  
+
+```text
+enigma/                      # <--- КОРЕНЬ ПРОЕКТА  
+├── .env                      # Общий конфиг  
+├── docker-compose.yml        # Оркестрация (API, DB, Redis, Bot)  
+├── frontend/                 # SvelteKit  
+│  
+└── backend/                  # <--- КОРЕНЬ БЭКЕНДА  
+    ├── .venv/  
+    ├── app/  
+    │   ├── __init__.py  
+    │   ├── main.py           # Точка входа FastAPI  
+    │   ├── config.py         # Настройки (Pydantic Settings)  
+    │   │  
+    │   ├── api/              # HTTP Интерфейс  
+    │   │   ├── __init__.py  
+    │   │   ├── deps.py       # Зависимости (get_db_pool)  
+    │   │   └── v1/  
+    │   │       ├── __init__.py  
+    │   │       ├── endpoints.py      # Роуты: /tickets, /stats  
+    │   │       └── schemas.py        # Pydantic модели  
+    │   │  
+    │   ├── bot/              # Telegram Bot  
+    │   │   ├── __init__.py  
+    │   │   ├── main.py       # Точка входа бота + Listener Redis  
+    │   │   ├── handlers.py   # Обработчики команд  
+    │   │   └── keyboard.py   # Клавиатуры  
+    │   │  
+    │   │  
+    │   ├── db/               # Слой работы с БД (БЕЗ ORM)  
+    │   │   ├── __init__.py  
+    │   │   ├── database.py   # Подключение asyncpg (create_pool)  
+    │   │   └── repository.py # Функции с SQL запросами  
+    │   │  
+    │   ├── messaging/        # Интеграция с Redis  
+    │   │   ├── __init__.py  
+    │   │   └── publisher.py  # Отправка событий (new_ticket)  
+    │   │  
+    │   ├── services/         # БИЗНЕС-ЛОГИКА  
+    │   │   ├── __init__.py  
+    │   │   ├── email_service.py    # IMAP polling + SMTP отправка  
+    │   │   ├── ai_processor.py     # Внешний AI API  
+    │   │   ├── rag_engine.py       # FAISS  
+    │   │   └── parsing/            # NLP модуль  
+    │   │       ├── __init__.py  
+    │   │       ├── ner_extractor.py   # Natasha: ФИО, адрес  
+    │   │       ├── sentiment_analyzer.py # Dostoevsky: тональность  
+    │   │       ├── summarizer.py       # Sumy: краткое содержание  
+    │   │       └── utils.py           # Regex, маскировка ПД  
+    │   │  
+    │   └── workers/           # Фоновые задачи  
+    │       ├── __init__.py  
+    │       └── email_watcher.py # Воркер поллинга почты  
+    │  
+    ├── data/                   
+    │   ├── knowledge_base/   # PDF инструкции  
+    │   └── faiss_index/      # Индекс RAG  
+    ├── tests/	# Тесты (опционально)        
+    │  
+    ├── requirements.txt  
+    ├── Dockerfile  
+    └── README.md  
+```
+---
 Система построена на принципах **гибридной архитектуры AI**, обеспечивающей баланс между качеством генерации, скоростью работы и безопасностью данных.
 
 ### Принцип работы
