@@ -1,0 +1,32 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# venv
+<<<<<<< HEAD
+venv/
+venv/*
+=======
+*/venv/
+*/venv/*
+>>>>>>> e55fcc995232c23995db8985aecbb17986c25979

@@ -1,0 +1,6 @@
+fastapi[all]
+uvicorn[standard]
+asyncpg
+pydantic-settings
+python-dotenv
+email-validator

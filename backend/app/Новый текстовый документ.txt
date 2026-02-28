@@ -1,0 +1,85 @@
+Кейс: Создание автоматизированной системы для службы поддержки газовой службы.
+
+Dataflow:
+Недовольный пользователь пишет письмо на почтовый ящик службы поддержки с указанием ФИО, телефона, email, объекта (предприятия), заводского номера газоанализатора, типа прибора.
+1.  Бэкенд путем поллинга IMAP-сервера получает список всех входящих сообщений.
+2.  Письма обрабатываются NLP-модулем: Natasha/Regex извлекают сущности (ФИО, номера), Dostoevsky определяет сентимент, Sumy делает суммаризацию.
+3.  Текст письма без личных данных отправляется во внешний AI через API. AI использует базу знаний (RAG) для формулирования ответа.
+4.  Данные сохраняются в БД (PostgreSQL).
+5.  Бэкенд публикует событие в Redis.
+6.  Listener внутри Telegram-бота (aiogram) ловит событие и уведомляет сотрудника.
+7.  Сотрудник проверяет данные на Фронте, редактирует и подтверждает.
+8.  Статус тикета обновляется, пользователю уходит ответ через SMTP.
+
+Userflow:
+Сотрудник получает уведомления в ТГ, работает с тикетами на Фронте (редактирование, отправка ответа, аналитика).
+
+Стек:
+*   Frontend: SvelteKit
+*   Backend: FastAPI + Pydantic
+*   NLP: Natasha (NER), Pymorphy (морфология), Regex (парсинг), Dostoevsky (сентимент), Sumy (суммаризация).
+*   Bot: Aiogram
+*   Queue: Redis (Pub/Sub)
+*   DB: PostgreSQL (asyncpg)
+*   Deploy: Docker Compose
+
+Файловая структура проекта:
+enigma/                      # <--- КОРЕНЬ ПРОЕКТА
+├── .env                      # Общий конфиг
+├── docker-compose.yml        # Оркестрация (API, DB, Redis, Bot)
+├── frontend/                 # SvelteKit
+│
+└── backend/                  # <--- КОРЕНЬ БЭКЕНДА
+    ├── .venv/
+    ├── app/
+    │   ├── __init__.py
+    │   ├── main.py           # Точка входа FastAPI
+    │   ├── config.py         # Настройки (Pydantic Settings)
+    │   │
+    │   ├── api/              # HTTP Интерфейс
+    │   │   ├── __init__.py
+    │   │   ├── deps.py       # Зависимости (get_db_pool)
+    │   │   └── v1/
+    │   │       ├── __init__.py
+    │   │       ├── endpoints.py      # Роуты: /tickets, /stats
+    │   │       └── schemas.py        # Pydantic модели
+    │   │
+    │   ├── bot/              # Telegram Bot
+    │   │   ├── __init__.py
+    │   │   ├── main.py       # Точка входа бота + Listener Redis
+    │   │   ├── handlers.py   # Обработчики команд
+    │   │   └── keyboard.py   # Клавиатуры
+    │   │
+    │   │
+    │   ├── db/               # Слой работы с БД (БЕЗ ORM)
+    │   │   ├── __init__.py
+    │   │   ├── database.py   # Подключение asyncpg (create_pool)
+    │   │   └── repository.py # Функции с SQL запросами
+    │   │
+    │   ├── messaging/        # Интеграция с Redis
+    │   │   ├── __init__.py
+    │   │   └── publisher.py  # Отправка событий (new_ticket)
+    │   │
+    │   ├── services/         # БИЗНЕС-ЛОГИКА
+    │   │   ├── __init__.py
+    │   │   ├── email_service.py    # IMAP polling + SMTP отправка
+    │   │   ├── ai_processor.py     # Внешний AI API
+    │   │   ├── rag_engine.py       # FAISS
+    │   │   └── parsing/            # NLP модуль
+    │   │       ├── __init__.py
+    │   │       ├── ner_extractor.py   # Natasha: ФИО, адрес
+    │   │       └── utils.py           # Regex, маскировка ПД
+    │   │
+    │   └── workers/           # Фоновые задачи
+    │       ├── __init__.py
+    │       └── email_watcher.py # Воркер поллинга почты
+    │
+    ├── data/                 
+    │   ├── knowledge_base/   # PDF инструкции
+    │   └── faiss_index/      # Индекс RAG
+    ├── tests/  # Тесты (опционально)      
+    │
+    ├── requirements.txt
+    ├── Dockerfile
+    └── README.md
+сейчас мы работаем только над бэкэндом, а именно ты должен реализовать автоматический ответ пользователю по smtp протоколу, этот функционал должен работать асинхронно и вызывать с помощью http ручки, которая меняет поле сообщения processed на true и отправляет по smtp ответное письмо пользователю с текстом из поля llm_response
