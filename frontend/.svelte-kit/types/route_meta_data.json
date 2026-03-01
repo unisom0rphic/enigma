@@ -1,0 +1,7 @@
+{
+	"/": [],
+	"/analytics": [],
+	"/api/get_tickets": [
+		"src/routes/api/get_tickets/+server.js"
+	]
+}

@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+asyncpg
+email-validator
+setuptools==69.5.1
+httpx
+aiogram
+redis
+pypdf
+beautifulsoup4
+lxml

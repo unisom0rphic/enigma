@@ -1,0 +1,6 @@
+torch
+faiss-cpu
+sentence-transformers
+natasha
+pymorphy3
+

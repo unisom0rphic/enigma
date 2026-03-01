@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # --- DATABASE (PostgreSQL) ---
+  db:
+    image: postgres:15-alpine
+    container_name: enigma-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-ai_support}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- REDIS (Queue) ---
+  redis:
+    image: redis:7-alpine
+    container_name: enigma-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # --- BACKEND (API + Worker) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: enigma-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DSN=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-ai_support}
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/models:/root/.cache/huggingface
+      - ./backend/app:/app/app  # <--- ДОБАВИТЬ ЭТО: Проброс кода
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # --- TELEGRAM BOT ---
+  bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: enigma-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DSN=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-ai_support}
+    command: python -m app.bot.main
+    depends_on:
+      - backend
+      - redis
+
+  # --- FRONTEND (SvelteKit) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: enigma-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - ORIGIN=http://localhost:3000
+
+volumes:
+  postgres_data:
+  redis_data:
